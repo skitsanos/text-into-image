@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style type="text/css">
+        body
+        {
+            display: flex;
+        }
+
+        canvas
+        {
+            border: solid 1px #000;
+        }
+
+        .bordered
+        {
+            border: dotted 1px crimson;
+            margin: 1rem;
+            padding: 1rem;
+            width: 536px;
+            height: 354px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bordered">
+    <canvas id="view"></canvas>
+</div>
+
+<div class="bordered">
+    <canvas id="viewEncoded"></canvas>
+</div>
+
+<script src="encoder.js"></script>
+<script>
+    window.onload = () =>
+    {
+        console.log('Loaded');
+        const hexString = stringToHexArray(morseEncode('hello'), ' ');
+
+        const canvas = document.getElementById('view');
+        const canvasEncoded = document.getElementById('viewEncoded');
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = 'https://picsum.photos/536/354';
+
+        const getPixelArray = data =>
+        {
+            let pixelArray = [];
+            for (let i = 0; i < data.length; i += 4)
+            {
+                let r = data[i];
+                let g = data[i + 1];
+                let b = data[i + 2];
+                let a = data[i + 3];
+                pixelArray.push({r, g, b, a});
+            }
+            return pixelArray;
+        };
+
+        img.onload = function()
+        {
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            let imageData = canvas.getContext('2d').getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+
+            const hexArray = hexString.split(' ');
+            const pixelArray = getPixelArray(imageData.data);
+
+            const getMask = a =>
+            {
+                if (a === '2e')
+                {
+                    return 254;
+                }
+                if (a === '2d')
+                {
+                    return 253;
+                }
+                if (a === '20')
+                {
+                    return 252;
+                }
+
+                return 255;
+            };
+
+            for (let i = 0; i < pixelArray.length; i++)
+            {
+                let pixel = pixelArray[i];
+                pixel.a = getMask(hexArray[i]);
+            }
+
+            canvasEncoded.width = img.naturalWidth;
+            canvasEncoded.height = img.naturalHeight;
+            // Get the 2D context of the new canvas
+            let ctxEncoded = canvasEncoded.getContext('2d');
+            const imageNewData = ctxEncoded.createImageData(img.naturalWidth, img.naturalHeight);
+            const data = imageNewData.data;
+
+            const newBitmapArray = pixelArray.map(el => Object.values(el)).flat();
+
+            for (let i = 0; i < data.length; i++)
+            {
+                data[i] = newBitmapArray[i];
+            }
+
+            ctxEncoded.putImageData(imageNewData, 0, 0);
+        };
+    };
+</script>
+</body>
+</html>
